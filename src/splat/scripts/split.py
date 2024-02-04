@@ -315,7 +315,7 @@ def write_linker_script(all_segments: List[Segment]) -> LinkerWriter:
     vram_classes_to_search = set(vram_class_dependencies.keys())
 
     max_vram_end_insertion_points: Dict[Segment, List[Tuple[str, List[Segment]]]] = {}
-    for seg in reversed(all_segments):
+    for seg in all_segments:
         if seg.vram_class in vram_classes_to_search:
             assert seg.vram_class.vram_symbol is not None
             if seg not in max_vram_end_insertion_points:
