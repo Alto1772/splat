@@ -8,3 +8,5 @@ __pycache__/
 *.n64
 *.yaml
 *.z64
+/build
+/dist
