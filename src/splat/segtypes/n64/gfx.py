@@ -67,6 +67,7 @@ class N64SegGfx(CommonSegCodeSubsegment):
             args=args,
             yaml=yaml,
         )
+        self.data = None
         self.file_text = None
         self.data_only = isinstance(yaml, dict) and yaml.get("data_only", False)
         self.in_segment = not isinstance(yaml, dict) or yaml.get("in_segment", True)
@@ -81,7 +82,10 @@ class N64SegGfx(CommonSegCodeSubsegment):
         return options.opts.asset_path / self.dir / f"{self.name}.gfx.inc.c"
 
     def scan(self, rom_bytes: bytes):
-        self.file_text = self.disassemble_data(rom_bytes)
+        assert isinstance(self.rom_start, int)
+        assert isinstance(self.rom_end, int)
+
+        self.data = rom_bytes[self.rom_start : self.rom_end]
 
     def get_gfxd_target(self):
         opt = options.opts.gfx_ucode
@@ -196,12 +200,8 @@ class N64SegGfx(CommonSegCodeSubsegment):
         gfxd_puts(",\n")
         return 0
 
-    def disassemble_data(self, rom_bytes):
-        assert isinstance(self.rom_start, int)
-        assert isinstance(self.rom_end, int)
-        assert isinstance(self.vram_start, int)
-
-        gfx_data = rom_bytes[self.rom_start : self.rom_end]
+    def disassemble_data(self):
+        gfx_data = self.data
         segment_length = len(gfx_data)
         if (segment_length) % 8 != 0:
             error(
@@ -210,6 +210,7 @@ class N64SegGfx(CommonSegCodeSubsegment):
 
         out_str = "" if self.data_only else options.opts.generated_c_preamble + "\n\n"
 
+        assert isinstance(self.vram_start, int)
         sym = self.create_symbol(
             addr=self.vram_start, in_segment=True, type="data", define=True
         )
@@ -256,6 +257,9 @@ class N64SegGfx(CommonSegCodeSubsegment):
         return out_str
 
     def split(self, rom_bytes: bytes):
+        self.file_text = self.disassemble_data()
+
+    def write(self):
         if self.file_text and self.out_path():
             self.out_path().parent.mkdir(parents=True, exist_ok=True)
 

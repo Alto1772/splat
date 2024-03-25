@@ -34,6 +34,7 @@ class N64SegVtx(CommonSegCodeSubsegment):
             args=args,
             yaml=yaml,
         )
+        self.data = None
         self.file_text: Optional[str] = None
         self.data_only = isinstance(yaml, dict) and yaml.get("data_only", False)
 
@@ -47,14 +48,14 @@ class N64SegVtx(CommonSegCodeSubsegment):
         return options.opts.asset_path / self.dir / f"{self.name}.vtx.inc.c"
 
     def scan(self, rom_bytes: bytes):
-        self.file_text = self.disassemble_data(rom_bytes)
+        self.data = rom_bytes[self.rom_start : self.rom_end]
 
-    def disassemble_data(self, rom_bytes) -> str:
+    def disassemble_data(self) -> str:
         assert isinstance(self.rom_start, int)
         assert isinstance(self.rom_end, int)
         assert isinstance(self.vram_start, int)
 
-        vertex_data = rom_bytes[self.rom_start : self.rom_end]
+        vertex_data = self.data
         segment_length = len(vertex_data)
         if (segment_length) % 16 != 0:
             log.error(
@@ -89,6 +90,9 @@ class N64SegVtx(CommonSegCodeSubsegment):
         return "\n".join(lines)
 
     def split(self, rom_bytes: bytes):
+        self.file_text = self.disassemble_data()
+
+    def write(self):
         if self.file_text and self.out_path():
             self.out_path().parent.mkdir(parents=True, exist_ok=True)
 

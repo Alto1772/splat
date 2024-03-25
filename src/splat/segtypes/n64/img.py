@@ -76,14 +76,16 @@ class N64SegImg(N64Segment):
         return options.opts.is_mode_active("img")
 
     def split(self, rom_bytes):
-        path = self.out_path()
-        path.parent.mkdir(parents=True, exist_ok=True)
-
         assert isinstance(self.rom_start, int)
         assert isinstance(self.rom_end, int)
 
         if self.n64img.data == b"":
             self.n64img.data = rom_bytes[self.rom_start : self.rom_end]
+
+    def write(self):
+        path = self.out_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+
         self.n64img.write(path)
 
         self.log(f"Wrote {self.name} to {path}")

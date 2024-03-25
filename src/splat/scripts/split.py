@@ -308,6 +308,7 @@ def do_split(
                 with open(segment.file_path, "rb") as segment_input_file:
                     segment_bytes = segment_input_file.read()
             segment.split(segment_bytes)
+            segment.write()
 
 
 def write_linker_script(all_segments: List[Segment]) -> LinkerWriter:

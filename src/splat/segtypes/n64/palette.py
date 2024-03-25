@@ -17,6 +17,8 @@ class N64SegPalette(N64Segment):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.data: bytes = None
+
         if self.extract:
             if self.rom_end is None:
                 log.error(
@@ -60,10 +62,11 @@ class N64SegPalette(N64Segment):
 
         return palette
 
-    def parse_palette(self, rom_bytes) -> List[Tuple[int, int, int, int]]:
-        data = rom_bytes[self.rom_start : self.rom_end]
+    def split_palette(self, rom_bytes):
+        self.data = rom_bytes[self.rom_start : self.rom_end]
 
-        return N64SegPalette.parse_palette_bytes(data)
+    def parse_palette(self) -> List[Tuple[int, int, int, int]]:
+        return N64SegPalette.parse_palette_bytes(self.data)
 
     def should_split(self) -> bool:
         return self.extract and options.opts.is_mode_active("img")

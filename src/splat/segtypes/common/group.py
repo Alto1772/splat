@@ -135,6 +135,11 @@ class CommonSegGroup(CommonSegment):
             if sub.should_split():
                 sub.split(rom_bytes)
 
+    def write(self):
+        for sub in self.subsegments:
+            if sub.should_split():
+                sub.write()
+
     def should_split(self) -> bool:
         return self.extract
 

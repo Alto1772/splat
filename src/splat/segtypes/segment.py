@@ -532,6 +532,9 @@ class Segment:
     def split(self, rom_bytes: bytes):
         pass
 
+    def write(self):
+        pass
+
     def cache(self):
         return (self.yaml, self.rom_end)
 

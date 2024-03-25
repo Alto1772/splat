@@ -30,6 +30,9 @@ class N64SegCi(N64SegImg):
         self.palette_names = self.parse_palette_names(self.yaml, self.args)
 
     def scan(self, rom_bytes: bytes) -> None:
+        assert isinstance(self.rom_start, int)
+        assert isinstance(self.rom_end, int)
+
         self.n64img.data = rom_bytes[self.rom_start : self.rom_end]
 
     def out_path_pal(self, pal_name) -> Path:
@@ -55,15 +58,18 @@ class N64SegCi(N64SegImg):
                 f"no palettes have been mapped to ci segment `{self.name}`\n(hint: add a palette segment with the same name or use the `palettes:` field of this segment to specify palettes by name')"
             )
 
-        assert isinstance(self.rom_start, int)
-        assert isinstance(self.rom_end, int)
-        self.n64img.data = rom_bytes[self.rom_start : self.rom_end]
+        if self.n64img.data != None:
+            self.n64img.data = rom_bytes[self.rom_start : self.rom_end]
 
+        for palette in self.palettes:
+            palette.split_palette(rom_bytes)
+
+    def write(self):
         for palette in self.palettes:
             path = self.out_path_pal(palette.name)
             path.parent.mkdir(parents=True, exist_ok=True)
 
-            self.n64img.palette = palette.parse_palette(rom_bytes)
+            self.n64img.palette = palette.parse_palette()
             self.n64img.write(path)
 
             self.log(f"Wrote {path.name} to {path}")

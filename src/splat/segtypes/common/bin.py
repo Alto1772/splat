@@ -7,6 +7,11 @@ from .segment import CommonSegment
 
 
 class CommonSegBin(CommonSegment):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.data: bytes = None
+
     @staticmethod
     def is_data() -> bool:
         return True
@@ -15,18 +20,22 @@ class CommonSegBin(CommonSegment):
         return options.opts.asset_path / self.dir / f"{self.name}.bin"
 
     def split(self, rom_bytes):
-        path = self.out_path()
-        assert path is not None
-        path.parent.mkdir(parents=True, exist_ok=True)
-
         if self.rom_end is None:
             log.error(
                 f"segment {self.name} needs to know where it ends; add a position marker [0xDEADBEEF] after it"
             )
 
-        with open(path, "wb") as f:
-            assert isinstance(self.rom_start, int)
-            assert isinstance(self.rom_end, int)
+        assert isinstance(self.rom_start, int)
+        assert isinstance(self.rom_end, int)
 
-            f.write(rom_bytes[self.rom_start : self.rom_end])
+        self.data = rom_bytes[self.rom_start : self.rom_end]
+
+    def write(self):
+        path = self.out_path()
+        assert path is not None
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(path, "wb") as f:
+
+            f.write(self.data)
         self.log(f"Wrote {self.name} to {path}")
