@@ -16,6 +16,7 @@ from pygfxd import (
     gfxd_execute,
     gfxd_input_buffer,
     gfxd_light_callback,
+    gfxd_lightsn_callback,
     gfxd_lookat_callback,
     gfxd_macro_dflt,
     gfxd_macro_fn,
@@ -44,8 +45,6 @@ from ...util.log import error
 from ..common.codesubsegment import CommonSegCodeSubsegment
 
 from ...util import symbols
-
-LIGHTS_RE = re.compile(r"\*\(Lightsn \*\)0x[0-9A-F]{8}")
 
 
 class N64SegGfx(CommonSegCodeSubsegment):
@@ -153,7 +152,14 @@ class N64SegGfx(CommonSegCodeSubsegment):
         gfxd_printf(self.format_sym_name(sym))
         return 1
 
-    def light_handler(self, addr, count):
+    def light_handler(self, addr):
+        sym = self.create_symbol(
+            addr=addr, in_segment=self.in_segment, type="data", reference=True
+        )
+        gfxd_printf(self.format_sym_name(sym))
+        return 1
+
+    def lightsn_handler(self, addr, count):
         sym = self.create_symbol(
             addr=addr, in_segment=self.in_segment, type="data", reference=True
         )
@@ -230,6 +236,7 @@ class N64SegGfx(CommonSegCodeSubsegment):
         gfxd_mtx_callback(self.mtx_handler)
         gfxd_lookat_callback(self.lookat_handler)
         gfxd_light_callback(self.light_handler)
+        gfxd_lightsn_callback(self.lightsn_handler)
         # gfxd_seg_callback ?
         gfxd_vtx_callback(self.vtx_handler)
         gfxd_vp_callback(self.vp_handler)
@@ -245,17 +252,6 @@ class N64SegGfx(CommonSegCodeSubsegment):
             out_str += "Gfx " + self.format_sym_name(sym) + "[] = {\n"
             out_str += gfxd_buffer_to_string(outbuf)
             out_str += "};\n"
-
-        # Poor man's light fix until we get my libgfxd PR merged
-        def light_sub_func(match):
-            light = match.group(0)
-            addr = int(light[12:], 0)
-            sym = self.create_symbol(
-                addr=addr, in_segment=self.in_segment, type="data", reference=True
-            )
-            return self.format_sym_name(sym)
-
-        out_str = re.sub(LIGHTS_RE, light_sub_func, out_str)
 
         return out_str
 
