@@ -6,10 +6,8 @@ from ...util import options, log
 
 from ..common.codesubsegment import CommonSegCodeSubsegment
 
-# TODO: support other light structures (Lights0, Lights1..7, LookAt)
 
-
-class N64SegLight(CommonSegCodeSubsegment):
+class N64SegMtx(CommonSegCodeSubsegment):
     def __init__(
         self,
         rom_start: Optional[int],
@@ -39,7 +37,7 @@ class N64SegLight(CommonSegCodeSubsegment):
         return ".data"
 
     def out_path(self) -> Path:
-        return options.opts.asset_path / self.dir / f"{self.name}.light.inc.c"
+        return options.opts.asset_path / self.dir / f"{self.name}.mtx.inc.c"
 
     def scan(self, rom_bytes: bytes):
         assert isinstance(self.vram_start, int)
@@ -50,10 +48,10 @@ class N64SegLight(CommonSegCodeSubsegment):
     def disassemble_data(self) -> str:
         assert isinstance(self.rom_end, int)
 
-        light_data = self.data
-        if len(light_data) < 0x14 or len(light_data) > 0x20:
+        mtx_data = self.data
+        if len(mtx_data) != 0x40:
             log.error(
-                f"Error: Light segment {self.name} expected to be length of 0x14, got 0x{len(light_data):X}."
+                f"Error: Mtx segment {self.name} expected to be length of 0x40, got 0x{len(mtx_data):X}."
             )
 
         lines = []
@@ -65,25 +63,10 @@ class N64SegLight(CommonSegCodeSubsegment):
             addr=self.vram_start, in_segment=True, type="data", define=True
         )
 
-        lines.append(f"Lights1 {self.format_sym_name(sym)} = gdSPDefLights1(")
-
-        (
-            acolr,
-            acolg,
-            acolb,
-            lcolr,
-            lcolg,
-            lcolb,
-            ldirx,
-            ldiry,
-            ldirz,
-        ) = struct.unpack(">3Bx4x 3Bx4x3Bx", light_data[:0x14])
-        lines.append(f"    0x{acolr:02x}, 0x{acolg:02x}, 0x{acolb:02x},")
-        lines.append(
-            f"    0x{lcolr:02x}, 0x{lcolg:02x}, 0x{lcolb:02x}, 0x{ldirx:02x}, 0x{ldiry:02x}, 0x{ldirz:02x}"
-        )
-
-        lines.append(");")
+        lines.append(f"Mtx {self.format_sym_name(sym)} = {{{{")
+        for m1, m2, m3, m4 in struct.iter_unpack(">4I", mtx_data):
+            lines.append(f"    {{ 0x{m1:08X}, 0x{m2:08X}, 0x{m3:08X}, 0x{m4:08X} }},")
+        lines.append("}};")
 
         # enforce newline at end of file
         lines.append("")
@@ -100,10 +83,10 @@ class N64SegLight(CommonSegCodeSubsegment):
                 f.write(self.file_text)
 
     def should_scan(self) -> bool:
-        return options.opts.is_mode_active("light")
+        return options.opts.is_mode_active("mtx")
 
     def should_split(self) -> bool:
-        return self.extract and options.opts.is_mode_active("light")
+        return self.extract and options.opts.is_mode_active("mtx")
 
     @staticmethod
     def estimate_size(yaml: Union[Dict, List]) -> Optional[int]:
