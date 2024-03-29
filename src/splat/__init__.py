@@ -3,8 +3,8 @@ from typing import Tuple
 __package_name__ = __name__
 
 # Should be synced with pyproject.toml
-__version__ = "0.23.0"
-__author__ = "ethteck"
+__version__ = "0.23.0+exports.1"
+__author__ = "ethteck, AltoXorg"
 
 from . import util as util
 from . import disassembler as disassembler
