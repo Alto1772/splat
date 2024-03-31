@@ -179,6 +179,7 @@ class N64SegGfx(CommonSegCodeSubsegment):
                 addr=addr,
                 in_segment=self.in_segment,
                 type="Vtx",
+                size=count * 16,
                 reference=True,
                 search_ranges=True,
             )

@@ -695,6 +695,7 @@ class Segment:
         addr: int,
         in_segment: bool = False,
         type: Optional[str] = None,
+        size: Optional[int] = None,
         create: bool = False,
         define: bool = False,
         reference: bool = False,
@@ -732,7 +733,7 @@ class Segment:
 
         # Create the symbol if it doesn't exist
         if not ret and create:
-            ret = Symbol(addr, rom=rom, type=type)
+            ret = Symbol(addr, rom=rom, type=type, given_size=size)
             symbols.add_symbol(ret)
 
             if in_segment:
@@ -742,6 +743,8 @@ class Segment:
                 most_parent.seg_symbols[addr].append(ret)
 
         if ret:
+            if size is not None and ret.given_size is None:
+                ret.given_size = size
             if define:
                 ret.defined = True
             if reference:
@@ -761,6 +764,7 @@ class Segment:
         addr: int,
         in_segment: bool,
         type: Optional[str] = None,
+        size: Optional[int] = None,
         define: bool = False,
         reference: bool = False,
         search_ranges: bool = False,
@@ -770,6 +774,7 @@ class Segment:
             addr,
             in_segment=in_segment,
             type=type,
+            size=size,
             create=True,
             define=define,
             reference=reference,
