@@ -42,12 +42,12 @@ from ..segment import Segment
 from ...util import log, options
 from ...util.log import error
 
-from ..common.codesubsegment import CommonSegCodeSubsegment
-
 from ...util import symbols
 
+from ..common.generatedcode import CommonSegGeneratedCode
 
-class N64SegGfx(CommonSegCodeSubsegment):
+
+class N64SegGfx(CommonSegGeneratedCode):
     def __init__(
         self,
         rom_start: Optional[int],
@@ -67,25 +67,27 @@ class N64SegGfx(CommonSegCodeSubsegment):
             args=args,
             yaml=yaml,
         )
-        self.data = None
-        self.file_text = None
-        self.data_only = isinstance(yaml, dict) and yaml.get("data_only", False)
         self.in_segment = not isinstance(yaml, dict) or yaml.get("in_segment", True)
 
-    def format_sym_name(self, sym) -> str:
-        return sym.name
+    def is_array(self) -> bool:
+        return True
 
-    def get_linker_section(self) -> str:
-        return ".data"
+    def get_data_type(self) -> str:
+        return "Gfx"
 
-    def out_path(self) -> Path:
-        return options.opts.asset_path / self.dir / f"{self.name}.gfx.inc.c"
+    def out_type(self) -> str:
+        return "gfx"
 
-    def scan(self, rom_bytes: bytes):
-        assert isinstance(self.rom_start, int)
-        assert isinstance(self.rom_end, int)
+    def get_size_per(self) -> int:
+        return 8
 
-        self.data = rom_bytes[self.rom_start : self.rom_end]
+    def check_length(self):
+        segment_length = len(self.data)
+
+        if segment_length % 8 != 0:
+            log.error(
+                f"Error: gfx segment {self.name} length ({segment_length}) is not a multiple of 8!"
+            )
 
     def get_gfxd_target(self):
         opt = options.opts.gfx_ucode
@@ -201,25 +203,11 @@ class N64SegGfx(CommonSegCodeSubsegment):
         gfxd_puts(",\n")
         return 0
 
-    def disassemble_data(self):
-        gfx_data = self.data
-        segment_length = len(gfx_data)
-        if (segment_length) % 8 != 0:
-            error(
-                f"Error: gfx segment {self.name} length ({segment_length}) is not a multiple of 8!"
-            )
-
-        out_str = "" if self.data_only else options.opts.generated_c_preamble + "\n\n"
-
-        assert isinstance(self.vram_start, int)
-        sym = self.create_symbol(
-            addr=self.vram_start, in_segment=True, type="data", define=True
-        )
-
-        gfxd_input_buffer(gfx_data)
+    def get_body(self) -> List[str]:
+        gfxd_input_buffer(self.data)
 
         # TODO terrible guess at the size we'll need - improve this
-        outb = bytes([0] * segment_length * 100)
+        outb = bytes([0] * len(self.data) * 100)
         outbuf = gfxd_output_buffer(outb, len(outb))
 
         gfxd_target(self.get_gfxd_target())
@@ -248,34 +236,7 @@ class N64SegGfx(CommonSegCodeSubsegment):
 
         gfxd_execute()
 
-        if self.data_only:
-            out_str += gfxd_buffer_to_string(outbuf)
-        else:
-            out_str += "Gfx " + self.format_sym_name(sym) + "[] = {\n"
-            out_str += gfxd_buffer_to_string(outbuf)
-            out_str += "};\n"
-
-        return out_str
-
-    def split(self, rom_bytes: bytes):
-        self.file_text = self.disassemble_data()
-
-    def write(self):
-        if self.file_text and self.out_path():
-            self.out_path().parent.mkdir(parents=True, exist_ok=True)
-
-            with open(self.out_path(), "w", newline="\n") as f:
-                f.write(self.file_text)
-
-    def should_scan(self) -> bool:
-        return (
-            options.opts.is_mode_active("gfx")
-            and self.rom_start is not None
-            and self.rom_end is not None
-        )
-
-    def should_split(self) -> bool:
-        return self.extract and options.opts.is_mode_active("gfx")
+        return [gfxd_buffer_to_string(outbuf).rstrip("\n")]
 
     @staticmethod
     def estimate_size(yaml: Union[Dict, List]) -> Optional[int]:
